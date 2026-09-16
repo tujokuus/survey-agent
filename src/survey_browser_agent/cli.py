@@ -16,13 +16,23 @@ app = typer.Typer(
 )
 
 
-def _context() -> tuple[Settings, RunStore]:
-    settings = Settings()
+def _context(model: str | None = None) -> tuple[Settings, RunStore]:
+    settings = Settings(ollama_model=model) if model else Settings()
     return settings, RunStore(settings.resolved_database_path)
 
 
-def _run_news_read(url: str) -> None:
-    settings, store = _context()
+def _run_news_read(
+    url: Annotated[str, typer.Argument(help="Public HTTP(S) news article URL")],
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            "-m",
+            help="Ollama model for this run, for example qwen3.5:9b or llama3.1:8b",
+        ),
+    ] = None,
+) -> None:
+    settings, store = _context(model)
     health = check_ollama(settings.ollama_base_url, settings.ollama_model)
     if not health.reachable or not health.model_available:
         typer.echo(health.message, err=True)
@@ -39,17 +49,34 @@ def _run_news_read(url: str) -> None:
 @app.command("news-read")
 def news_read(
     url: Annotated[str, typer.Argument(help="Public HTTP(S) news article URL")],
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            "-m",
+            help="Ollama model for this run, for example qwen3.5:9b or llama3.1:8b",
+        ),
+    ] = None,
 ) -> None:
     """Open one article in visible Chrome and save structured data."""
 
-    _run_news_read(url)
+    _run_news_read(url, model)
 
 
 @app.command("check")
-def check() -> None:
+def check(
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            "-m",
+            help="Ollama model to check; otherwise use the configured default",
+        ),
+    ] = None,
+) -> None:
     """Check Ollama, the selected model, Chrome configuration, and Browser Use."""
 
-    settings, _ = _context()
+    settings, _ = _context(model)
     health = check_ollama(settings.ollama_base_url, settings.ollama_model)
     typer.echo(health.message)
     try:

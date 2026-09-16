@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     max_steps: int = Field(default=12, ge=1, le=50)
     timeout_seconds: int = Field(default=600, ge=30, le=3600)
     qwen35_9b_llm_timeout_seconds: int = Field(default=180, ge=30, le=600)
+    llama31_8b_llm_timeout_seconds: int = Field(default=180, ge=30, le=600)
+    ollama_context_tokens: int = Field(default=16_384, ge=4096, le=131_072)
+    ollama_max_output_tokens: int = Field(default=2048, ge=256, le=8192)
     use_vision: bool = False
 
     def absolute_path(self, path: Path) -> Path:
@@ -81,6 +84,8 @@ class Settings(BaseSettings):
 
         if self.ollama_model.casefold() == "qwen3.5:9b":
             return self.qwen35_9b_llm_timeout_seconds
+        if self.ollama_model.casefold() == "llama3.1:8b":
+            return self.llama31_8b_llm_timeout_seconds
         return None
 
 

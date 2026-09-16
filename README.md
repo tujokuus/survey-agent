@@ -106,6 +106,21 @@ Use the direct command requested by the MVP:
 uv run news-read "https://example.com/a-real-news-article"
 ```
 
+Select either local model for one run without editing `.env`:
+
+```powershell
+uv run news-read "https://example.com/a-real-news-article" --model qwen3.5:9b
+uv run news-read "https://example.com/a-real-news-article" --model llama3.1:8b
+```
+
+Before the first Llama run, download that model with `ollama pull llama3.1:8b`. You can
+check either model without opening Chrome:
+
+```powershell
+uv run survey-browser-agent check --model qwen3.5:9b
+uv run survey-browser-agent check --model llama3.1:8b
+```
+
 The equivalent grouped command is:
 
 ```powershell
@@ -120,12 +135,28 @@ failed run metadata, and closes the dedicated browser session. Limits can be cha
 SURVEY_AGENT_MAX_STEPS=12
 SURVEY_AGENT_TIMEOUT_SECONDS=600
 SURVEY_AGENT_QWEN35_9B_LLM_TIMEOUT_SECONDS=180
+SURVEY_AGENT_LLAMA31_8B_LLM_TIMEOUT_SECONDS=180
+SURVEY_AGENT_OLLAMA_CONTEXT_TOKENS=16384
+SURVEY_AGENT_OLLAMA_MAX_OUTPUT_TOKENS=2048
 ```
 
-`qwen3.5:9b` gets a 180-second limit for each model response because local inference can
-take longer than Browser Use's default 75 seconds on a complex page. The override is matched
-by model name and does not change Browser Use's timeout for other models. The 600-second
-overall limit still stops the complete browser run if several slow steps accumulate.
+`qwen3.5:9b` and `llama3.1:8b` each get a model-specific 180-second limit for each response
+because local inference can take longer than Browser Use's default 75 seconds on a complex
+page. The overrides are matched by model name and do not change Browser Use's timeout for
+other models. The 600-second overall limit still stops the complete browser run if several
+slow steps accumulate.
+
+The local-model path is deliberately lean. Qwen's extended thinking is disabled,
+temperature is deterministic, the prompt context is capped at 16,384 tokens, output is
+capped at 2,048 tokens, Browser Use flash mode removes evaluation/planning fields, DOM
+attributes are reduced, history keeps the minimum six items allowed by Browser Use, and the judge/compaction calls are
+disabled. The model still receives the task, visible page representation, extraction result,
+allowed actions, and required `NewsArticle` schema. These settings reduce browser plumbing;
+they do not remove article fields or weaken the read-only action boundary.
+
+`NewsArticle` exposes a flat extraction schema for Browser Use 0.12.x. It uses only primitive
+types, arrays, an inline status enum, and `nullable`; unsupported `$defs`, `$ref`, and `anyOf`
+composition are omitted. Pydantic still validates the returned data with the full model.
 
 List previous runs and inspect one result:
 
