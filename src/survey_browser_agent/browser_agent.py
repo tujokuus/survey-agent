@@ -64,12 +64,9 @@ def _browser(settings: Settings, url: str):
     _prepare_browser_use_environment()
     from browser_use import BrowserSession
 
-    profile_dir = settings.resolved_chrome_profile_dir
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile_directory = settings.resolve_chrome_profile_directory()
     options: dict = {
         "headless": False,
-        "user_data_dir": profile_dir,
-        "profile_directory": "Default",
         "allowed_domains": allowed_domain_patterns(url),
         "keep_alive": False,
         "enable_default_extensions": False,
@@ -78,9 +75,13 @@ def _browser(settings: Settings, url: str):
     }
     if settings.chrome_executable_path:
         options["executable_path"] = str(settings.chrome_executable_path)
-    else:
-        options["channel"] = "chrome"
-    return BrowserSession(**options)
+        options["user_data_dir"] = settings.system_chrome_user_data_dir
+        options["profile_directory"] = profile_directory
+        return BrowserSession(**options)
+    return BrowserSession.from_system_chrome(
+        profile_directory=profile_directory,
+        **options,
+    )
 
 
 def _validate_result(result: NewsArticle, requested_url: str) -> NewsArticle:
@@ -147,8 +148,12 @@ async def read_news(
         current_url = await agent.browser_session.get_current_page_url()
         report(f"Step {steps}/{settings.max_steps}: inspecting {current_url or safe_url}")
 
-    report(f"Starting visible Chrome with profile: {settings.resolved_chrome_profile_dir}")
+    profile_directory = settings.resolve_chrome_profile_directory()
+    report(f"Starting visible Chrome profile: {settings.chrome_profile_name} ({profile_directory})")
     report(f"Using local Ollama model: {settings.ollama_model}")
+    model_timeout = settings.llm_timeout_for_selected_model()
+    if model_timeout is not None:
+        report(f"Model response timeout: {model_timeout} seconds")
     try:
         llm = ChatOllama(model=settings.ollama_model, host=settings.ollama_base_url)
         agent = Agent(
@@ -162,6 +167,7 @@ async def read_news(
             max_actions_per_step=1,
             max_failures=2,
             final_response_after_failure=True,
+            llm_timeout=model_timeout,
         )
         report("Opening the article and starting read-only inspection...")
         async with asyncio.timeout(settings.timeout_seconds):

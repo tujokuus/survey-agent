@@ -64,8 +64,12 @@ def check() -> None:
         state = "found" if chrome_path.exists() else "missing"
         typer.echo(f"Configured Chrome: {chrome_path} ({state})")
     else:
-        typer.echo("Chrome path: automatic detection (channel=chrome)")
-    typer.echo(f"Dedicated profile: {settings.resolved_chrome_profile_dir}")
+        typer.echo("Chrome path: automatic system Chrome detection")
+    try:
+        directory = settings.resolve_chrome_profile_directory()
+        typer.echo(f"Chrome profile: {settings.chrome_profile_name} ({directory})")
+    except ValueError as exc:
+        typer.echo(f"Chrome profile error: {exc}")
 
 
 @app.command("runs")

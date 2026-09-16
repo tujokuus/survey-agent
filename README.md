@@ -21,8 +21,9 @@ checks, or submit anything.
 - `cli.py` implements `news-read`, `check`, `runs`, `show`, and automatic help.
 - `tests/` covers URL boundaries, model normalization, and SQLite round trips.
 
-Runtime files live under `data/` and are ignored by Git. The dedicated Chrome profile is
-`data/chrome-profile/`; the database is `data/survey_browser_agent.db`.
+Runtime files live under `data/` and are ignored by Git. Browser Use is configured to use
+the dedicated system Chrome profile named `Giveaway Agent` (`Profile 3` on the current
+computer); the database is `data/survey_browser_agent.db`.
 
 ## Safety boundary
 
@@ -39,6 +40,13 @@ designed and tested.
 
 Only public `http://` and `https://` URLs are accepted. Obvious local and private IP targets
 are rejected. This is a learning-grade guard, not a hardened network sandbox.
+
+The `Giveaway Agent` Chrome profile should remain dedicated to this project. Do not sign in
+to personal accounts or save personal addresses, payment methods, passwords, or unrelated
+extensions in it. Browser Use resolves the profile by display name and stops with a clear
+error if it cannot find it; it will not silently select another Chrome profile. Close any
+ordinary Chrome window using that profile before running the agent so Chrome can copy it
+without profile-lock conflicts.
 
 ## Install on Windows with PowerShell
 
@@ -110,8 +118,14 @@ failed run metadata, and closes the dedicated browser session. Limits can be cha
 
 ```dotenv
 SURVEY_AGENT_MAX_STEPS=12
-SURVEY_AGENT_TIMEOUT_SECONDS=180
+SURVEY_AGENT_TIMEOUT_SECONDS=600
+SURVEY_AGENT_QWEN35_9B_LLM_TIMEOUT_SECONDS=180
 ```
+
+`qwen3.5:9b` gets a 180-second limit for each model response because local inference can
+take longer than Browser Use's default 75 seconds on a complex page. The override is matched
+by model name and does not change Browser Use's timeout for other models. The 600-second
+overall limit still stops the complete browser run if several slow steps accumulate.
 
 List previous runs and inspect one result:
 
@@ -148,9 +162,9 @@ Do not place personal information in article URLs or pages you process. The appl
 does not configure Browser Use sensitive data, disables Browser Use telemetry/cloud sync,
 and does not save model reasoning.
 
-Browser Use controls Chrome through the Chrome DevTools Protocol. The profile directory
-keeps this project separate from a normal personal Chrome profile. Do not use it for logins
-in this MVP.
+Browser Use controls Chrome through the Chrome DevTools Protocol. The dedicated `Giveaway
+Agent` system profile keeps this project separate from personal Chrome profiles. Do not use
+it for logins in this MVP.
 
 ## Development phases represented here
 
